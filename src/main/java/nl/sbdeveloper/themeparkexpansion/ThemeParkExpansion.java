@@ -26,8 +26,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 public class ThemeParkExpansion extends PlaceholderExpansion {
     @Override
@@ -47,7 +45,7 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
 
     @Override
     public String getVersion() {
-        return "1.4";
+        return "1.4.1";
     }
 
     @Override
