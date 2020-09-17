@@ -17,6 +17,7 @@ package nl.sbdeveloper.themeparkexpansion;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import nl.iobyte.themepark.api.API;
+import nl.iobyte.themepark.api.attraction.Attraction;
 import nl.iobyte.themepark.api.attraction.component.Status;
 import nl.iobyte.themepark.api.attraction.manager.StatusManager;
 import nl.iobyte.themepark.ridecount.RideCountAPI;
@@ -24,7 +25,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class ThemeParkExpansion extends PlaceholderExpansion {
     @Override
@@ -98,16 +101,12 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
 
         //%tp_ridecount%
         if (identifier.equals("ridecount")) {
-            int totalCount = API.getAttractions().values().stream().mapToInt(att -> {
-                try {
-                    return RideCountAPI.getCount(player.getUniqueId(), att).get();
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
-                }
-                return 0;
-            }).sum();
+            CompletableFuture<Integer> result = CompletableFuture.completedFuture(0);
+            for (Attraction att : API.getAttractions().values()) {
+                result = result.thenCombine(RideCountAPI.getCount(player.getUniqueId(), att), Integer::sum);
+            }
 
-            return "" + totalCount;
+            return "" + result.join();
         } else if (identifier.startsWith("ridecount")) {
             String[] args = identifier.split(":");
             if(args.length < 2)
