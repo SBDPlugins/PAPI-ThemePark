@@ -45,7 +45,7 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
 
     @Override
     public String getVersion() {
-        return "1.4.1";
+        return "1.5";
     }
 
     @Override
@@ -99,7 +99,7 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
 
         //%tp_ridecount%
         if (identifier.equals("ridecount")) {
-            CompletableFuture<Integer> result = CompletableFuture.completedFuture(0);
+            CompletableFuture<Integer> result = new CompletableFuture<>();
             for (Attraction att : API.getAttractions().values()) {
                 result = result.thenCombine(RideCountAPI.getCount(player.getUniqueId(), att), Integer::sum);
             }
@@ -114,7 +114,7 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
             if(!API.isAttraction(id))
                 return "";
 
-            return "" + RideCountAPI.getCount(player.getUniqueId(), API.getAttraction(id));
+            return "" + RideCountAPI.getCount(player.getUniqueId(), API.getAttraction(id)).join();
         }
 
         return null;
