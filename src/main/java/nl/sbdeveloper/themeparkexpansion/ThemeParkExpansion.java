@@ -91,6 +91,19 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
             return color(API.getAttraction(id).getName());
         }
 
+        //%tp_region:ID%
+        if(identifier.startsWith("region")) {
+            String[] args = identifier.split(":");
+            if(args.length < 2)
+                return "";
+
+            String id = args[1];
+            if(!API.isAttraction(id))
+                return "";
+
+            return API.getAttraction(id).getRegionId();
+        }
+
         if (player == null) {
             return "";
         }
