@@ -1,31 +1,17 @@
-/*
-    ThemePark Expansion - Provides PlaceholderAPI placeholders for ThemePark
-    Copyright (C) 2020 SBDeveloper
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package nl.sbdeveloper.themeparkexpansion;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
-import nl.iobyte.themepark.api.API;
-import nl.iobyte.themepark.api.attraction.Attraction;
-import nl.iobyte.themepark.api.attraction.component.Status;
-import nl.iobyte.themepark.api.attraction.manager.StatusManager;
-import nl.iobyte.themepark.ridecount.RideCountAPI;
+import net.md_5.bungee.api.ChatColor;
+import nl.iobyte.themepark.ThemePark;
+import nl.iobyte.themepark.api.attraction.enums.Status;
+import nl.iobyte.themepark.api.attraction.objects.Attraction;
+import nl.iobyte.themepark.api.ridecount.enums.TotalType;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class ThemeParkExpansion extends PlaceholderExpansion {
     @Override
@@ -45,7 +31,7 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
 
     @Override
     public String getVersion() {
-        return "1.5";
+        return "1.6.3";
     }
 
     @Override
@@ -58,50 +44,131 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
     }
 
     @Override
-    public String onRequest(OfflinePlayer player, String identifier){
-        if(identifier == null)
+    public String onRequest(OfflinePlayer player, String identifier) {
+        if (identifier == null)
             return "";
 
         /* Non-player placeholders */
 
         //%tp_status:ID%
-        if(identifier.startsWith("status")) {
+        if (identifier.startsWith("status")) {
             String[] args = identifier.split(":");
-            if(args.length < 2)
+            if (args.length < 2)
                 return "";
 
             String id = args[1];
-            if(!API.isAttraction(id))
+            if (!ThemePark.getInstance().getAPI().getAttractionService().hasAttraction(id))
                 return "";
 
-            Status status = API.getAttraction(id).getStatus();
-            return (StatusManager.getName(status));
+            Status status = ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id).getStatus();
+            return status.getColor() + status.getName();
         }
 
         //%tp_name:ID%
-        if(identifier.startsWith("name")) {
+        if (identifier.startsWith("name")) {
             String[] args = identifier.split(":");
-            if(args.length < 2)
+            if (args.length < 2)
                 return "";
 
             String id = args[1];
-            if(!API.isAttraction(id))
+            if (!ThemePark.getInstance().getAPI().getAttractionService().hasAttraction(id))
                 return "";
 
-            return color(API.getAttraction(id).getName());
+            return color(ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id).getName());
         }
 
         //%tp_region:ID%
-        if(identifier.startsWith("region")) {
+        if (identifier.startsWith("region")) {
             String[] args = identifier.split(":");
-            if(args.length < 2)
+            if (args.length < 2)
                 return "";
 
             String id = args[1];
-            if(!API.isAttraction(id))
+            if (!ThemePark.getInstance().getAPI().getAttractionService().hasAttraction(id))
                 return "";
 
-            return API.getAttraction(id).getRegionId();
+            return ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id).getRegionID();
+        }
+
+        //%tp_ridecounttop_name:<ID>:<Position>:[Type]%
+        if (identifier.startsWith("ridecounttop_name")) {
+            String[] args = identifier.split(":");
+            if (args.length < 3)
+                return "";
+
+            String id = args[1];
+            if (!ThemePark.getInstance().getAPI().getAttractionService().hasAttraction(id))
+                return "";
+
+            int position;
+            try {
+                position = Integer.parseInt(args[2]);
+            } catch (NumberFormatException ex) {
+                return "";
+            }
+
+            TotalType type = TotalType.TOTAL;
+            if (args.length > 3) {
+                type = TotalType.valueOf(args[3].toUpperCase());
+            }
+
+            Map<UUID, Integer> map;
+            switch (type) {
+                case DAILY:
+                    map = ThemePark.getInstance().getAPI().getRideCountService().getTopData().getDay(ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id)).join();
+                    break;
+                case WEEKLY:
+                    map = ThemePark.getInstance().getAPI().getRideCountService().getTopData().getWeek(ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id)).join();
+                    break;
+                case MONTHLY:
+                    map = ThemePark.getInstance().getAPI().getRideCountService().getTopData().getMonth(ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id)).join();
+                    break;
+                case YEARLY:
+                    map = ThemePark.getInstance().getAPI().getRideCountService().getTopData().getYear(ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id)).join();
+                    break;
+                default:
+                    map = ThemePark.getInstance().getAPI().getRideCountService().getTopData().getTotal(ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id)).join();
+                    break;
+            }
+
+            if (map.size() < position)
+                return "";
+
+            UUID key = map.keySet().toArray(UUID[]::new)[position - 1];
+            OfflinePlayer of = Bukkit.getOfflinePlayer(key);
+
+            if (!of.isOnline() && !of.hasPlayedBefore())
+                return "";
+
+            return of.getName();
+        }
+
+        //%tp_ridecounttop_value:<ID>:<Position>%
+        if (identifier.startsWith("ridecounttop_value")) {
+            String[] args = identifier.split(":");
+            if (args.length < 3)
+                return "";
+
+            String id = args[1];
+            if (!ThemePark.getInstance().getAPI().getAttractionService().hasAttraction(id))
+                return "";
+
+            int position;
+            try {
+                position = Integer.parseInt(args[2]);
+            } catch (NumberFormatException ex) {
+                return "";
+            }
+
+            HashMap<UUID, Integer> map = ThemePark.getInstance().getAPI().getRideCountService().getTopData().getTotal(ThemePark.getInstance().getAPI().getAttractionService().getAttraction(id)).join();
+
+            if (map.size() < position)
+                return "";
+
+            UUID key = map.keySet().toArray(UUID[]::new)[position - 1];
+            int value = map.get(key);
+
+            return "" + value;
         }
 
         if (player == null) {
@@ -112,22 +179,22 @@ public class ThemeParkExpansion extends PlaceholderExpansion {
 
         //%tp_ridecount%
         if (identifier.equals("ridecount")) {
-            CompletableFuture<Integer> result = new CompletableFuture<>();
-            for (Attraction att : API.getAttractions().values()) {
-                result = result.thenCombine(RideCountAPI.getCount(player.getUniqueId(), att), Integer::sum);
+            int result = 0;
+            for (Attraction att : ThemePark.getInstance().getAPI().getAttractionService().getAttractions().values()) {
+                result += ThemePark.getInstance().getAPI().getRideCountService().getCount(att.getID(), player.getUniqueId()).getCount();
             }
 
-            return "" + result.join();
+            return "" + result;
         } else if (identifier.startsWith("ridecount")) {
             String[] args = identifier.split(":");
-            if(args.length < 2)
+            if (args.length < 2)
                 return "";
 
             String id = args[1];
-            if(!API.isAttraction(id))
+            if (!ThemePark.getInstance().getAPI().getAttractionService().hasAttraction(id))
                 return "";
 
-            return "" + RideCountAPI.getCount(player.getUniqueId(), API.getAttraction(id)).join();
+            return "" + ThemePark.getInstance().getAPI().getRideCountService().getCount(id, player.getUniqueId()).getCount();
         }
 
         return null;
