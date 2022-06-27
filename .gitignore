@@ -1,4 +1,4 @@
 *.iml
 .idea
-src/lib/themepark-2.1.2.jar
+src/lib/*
 target
